@@ -1,4 +1,4 @@
-//➜  net cat dev.cpp
+//						dev.cpp
 
 #include <fstream>
 #include <fcntl.h>
@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <iostream>
 
 #ifdef __linux__
 #define PROC_NET_DEV "/proc/net/dev"
@@ -18,12 +19,12 @@
 
 struct InterfaceBandwidthStats{
 	std::string iface;
-	unsigned long long 	recived_bytes;
+	unsigned long long 	received_bytes;
 	unsigned long long 	transmitted_byte;
-	unsigned long 		  recived_packets;
-	unsigned long 		  transmited_packets;
-	unsigned long 		  recived_drop;
-	unsigned long 		  transmited_drop;
+	unsigned long 		received_packets;
+	unsigned long 		transmited_packets;
+	unsigned long 		received_drop;
+	unsigned long 		transmited_drop;
 };
 
 std::vector<std::string> split(std::string const &input){
@@ -31,11 +32,8 @@ std::vector<std::string> split(std::string const &input){
 	vector<string> packs;
 	string token;
 	istringstream input_stream(input);
-  
+	
 	while(input_stream >> token){
-		if( ":" == token ){
-			continue;
-		}
 		packs.push_back(token);
 	}
 	return packs;
@@ -50,21 +48,20 @@ std::vector <struct InterfaceBandwidthStats> r_NetDev(){
 	size_t  buff_used = 0;
 	size_t  capacity = 0;
 
-	if(access(PROC_NET_DEV, F_OK) == -1) return {};
-	if(access(PROC_NET_DEV, R_OK) == -1) return {};
-	
+	if(access(PROC_NET_DEV, F_OK) == -1){ std::cout << "F_OK"; return {};};
+	if(access(PROC_NET_DEV, R_OK) == -1){ std::cout << "R_OK"; return {};};
 	filefd = open(PROC_NET_DEV, O_RDONLY | O_CLOEXEC);
 	if(filefd == -1){
 		return {};
 	}
-  
+	
 	while((nread = read(filefd, temp_buff, PAGE_SIZE)) > 0){
 		if(buff_used + nread > capacity){
 			capacity = capacity ? capacity * 2 : PAGE_SIZE;
 			while(capacity < buff_used + nread){
 				capacity *= 2;
 			}
-			char* newbuf = (char*)realloc(newbuf,capacity);
+			char* newbuf = (char*)realloc(buffer,capacity);
 			if(!newbuf){
 				free(buffer);
 				close(filefd);
@@ -77,10 +74,13 @@ std::vector <struct InterfaceBandwidthStats> r_NetDev(){
 	}
 	std::string dev_data(buffer, buff_used);
 	free(buffer);
-
-	if(nread < 0) return {};
-
-	//----------
+	if(nread < 0){
+		if(close(filefd) < 0){
+       		return {};
+		}
+		return {};
+	}
+	//=================
 	
 	std::vector <struct InterfaceBandwidthStats> result;
 	std::vector <std::string>		    tokens;
@@ -92,18 +92,24 @@ std::vector <struct InterfaceBandwidthStats> r_NetDev(){
 	std::getline(stream, line);
 	while(std::getline(stream,line)){
 		tokens = split(line);
-		
-		struct InterfaceBindwidthStats Intfb;
+
+		//removing ':' from interface name formate
+		auto colon = line.find(':');
+		if(colon == std::string::npos) continue;
+		std::string iface = tokens[0];
+		if(!iface.empty() && iface.back() == ':'){
+			iface.pop_back();
+		}
+
+		struct InterfaceBandwidthStats Intfb;
 		if(tokens.size() < 17 ) continue;
-    
-		Intfb.iface = tokens[0];
-		Intfb.recived_bytes   = std::stoull(tokens[1]);
-		Intfb.recived_packets = std::stoul(tokens[2]);
-		Intfb.recived_drop    = std::stoul(tokens[4]);
-		Intfb.transmitted_byte= std::stoull(tokens[9]);
-		Intfb.transmited_packets=std::stoul(tokens[10]);
-		Intfb.transmited_drop = std::stoul(tokens[12]);
-			
+		Intfb.iface 			= iface;
+		Intfb.received_bytes   		= std::stoull(tokens[1]);
+		Intfb.received_packets 		= std::stoul(tokens[2]);
+		Intfb.received_drop    		= std::stoul(tokens[4]);
+		Intfb.transmitted_byte		= std::stoull(tokens[9]);
+		Intfb.transmited_packets	= std::stoul(tokens[10]);
+		Intfb.transmited_drop 		= std::stoul(tokens[12]);
 		result.push_back(Intfb);
 		
 	}
@@ -114,7 +120,21 @@ std::vector <struct InterfaceBandwidthStats> r_NetDev(){
 	return result;
 }
 
+
+
+
 /*
 	EACCES	, ENOENT , EINVAL , ENOTDIR 
 	Errors has to be Mannaged in 18-21 
+*/
+//For Funtion Testing
+/*
+int main(){
+	std::vector <struct InterfaceBandwidthStats> nd = r_NetDev();	
+	//std::cout << nd.size();
+	for (auto& s: nd){
+		std::cout << s.iface << std::endl;
+	}
+	return 0;
+}
 */
