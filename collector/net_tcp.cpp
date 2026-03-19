@@ -147,8 +147,9 @@ std::vector<std::string> split(std::string const &input){
         }
 	return result;
 }
-
-int main(){
+//Test main funtn
+/* 
+	int main(){
 	std::vector<struct TcpEntry> res;
         res = r_NetTcp();
 	std::cout << res.size() << std::endl;
@@ -157,3 +158,6 @@ int main(){
 	}	
 	return 0;
 }
+
+
+*/
