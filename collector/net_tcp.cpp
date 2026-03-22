@@ -1,44 +1,10 @@
-// tcpx.cpp
-#include <unistd.h>
-#include <vector>
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <fcntl.h>
-#include <cstring>
-#include <cstdlib>
-#include <unistd.h>
+#include "../../include/tcp.hpp"
+#include "../../utils/utilsfoo.hpp"
 
 #ifdef __linux__
 #define PROC_NET_TCP 	"/proc/net/tcp"
 #define PAGE_SIZE 	4096
 #endif
-
-struct TcpEntry {
-    unsigned int sl;    
-    std::string local_address;
-    std::string remote_address;
-    unsigned int state;  
-    unsigned int tx_queue;
-    unsigned int rx_queue;
-    unsigned int timer_active;
-    unsigned int retransmits;
-    unsigned int uid;     
-    unsigned int drops;           
-};
-
-std::vector<std::string> split(std::string const &input){
-
-	using namespace std;
-        vector<string> packs;
-        string token;
-        istringstream input_stream(input);
-
-        while(input_stream >> token){
-                packs.push_back(token);
-        }
-        return packs;
-}
 
  std::vector<struct TcpEntry> r_NetTcp(){
 
@@ -55,7 +21,7 @@ std::vector<std::string> split(std::string const &input){
 	}
         if(access(PROC_NET_TCP, R_OK) == -1){ 
 		std::cout << "R_OK";
-	      	return{};
+	       	return{};
 	}
 
         filefd = open(PROC_NET_TCP, O_RDONLY | O_CLOEXEC);
@@ -86,7 +52,7 @@ std::vector<std::string> split(std::string const &input){
 		if(close(filefd) < 0){
                 	return{};
         	}
-	      
+	       
 		return{};
 	}
 	
@@ -147,17 +113,3 @@ std::vector<std::string> split(std::string const &input){
         }
 	return result;
 }
-//Test main funtn
-/* 
-	int main(){
-	std::vector<struct TcpEntry> res;
-        res = r_NetTcp();
-	std::cout << res.size() << std::endl;
-	for(auto& r: res){
-		std::cout << r.sl << std::endl;
-	}	
-	return 0;
-}
-
-
-*/
